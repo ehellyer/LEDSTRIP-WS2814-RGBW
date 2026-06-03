@@ -22,21 +22,26 @@
 // DIN pin (via 470 Ω resistor)
 static constexpr uint8_t DATA_PIN = 6;  
 
-// LED IC's in your strip.  (I have 3LED/IC in my WS2814, so 150 actual LEDs)
+// Actually the number of LED IC's in your strip.  (I have 3 LED per IC in my WS2814, so 150 actual LEDs)
 static constexpr uint16_t NUM_LEDS = 50; 
 
 // 0–255  (128 = 50 %)
 static constexpr uint8_t BRIGHTNESS = 200; 
 
-// ~60 fps
+// 16ms works out to be 60 fps
 static constexpr uint8_t FRAME_MS = 16;  
 
-// hue advance per frame; larger = faster chase  
-static constexpr uint16_t HUE_STEP = 100; 
+// Hue advance per frame; larger = faster chase
+static constexpr uint16_t HUE_STEP = 250;
+
+// Width of the white fade zone centred on hue=0 (red/wrap point).
+// 8192 = 1/8 of the circle (~45°).  Increase for a wider white blend.
+static constexpr uint16_t WHITE_ZONE = (16384 * 2);
 
 // Set true for a static colour test; false to run the scrolling animation.
 static constexpr bool TEST_MODE = false;
 
+// Serial baud rate for debug output
 static constexpr uint32_t SERIAL_BAUD = 115200;
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -69,16 +74,20 @@ uint16_t getHue(uint16_t position) {
     return (position * 65536UL) / NUM_LEDS; 
 }
 
+// Returns the mapped adafruit neo pixel 32-bit color value for a given hue, including white blending.
 uint32_t getLEDColor(uint16_t hue) {
+  
   uint32_t color = strip.gamma32(strip.ColorHSV(hue));
+
   uint8_t r = (color >> 24) & 0xFF;
   uint8_t g = (color >> 16) & 0xFF;
   uint8_t b = (color >> 8) & 0xFF;
   uint8_t w = color & 0xFF;
+
   return Adafruit_NeoPixel::Color(r, g, b, w);
 }
 
-void setLEDStrip() {
+void updateLEDStrip() {
   strip.clear();
   for (uint16_t i = 0; i < NUM_LEDS; i++) {
     uint16_t hue = getHue(i) + hueOffset; // uint16_t wraps naturally at
@@ -126,6 +135,6 @@ void loop() {
     return;
   lastFrame = now;
 
-  setLEDStrip();
+  updateLEDStrip();
   hueOffset += HUE_STEP; 
 }
